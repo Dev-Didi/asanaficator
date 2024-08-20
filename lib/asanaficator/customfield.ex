@@ -70,7 +70,7 @@ defmodule Asanaficator.CustomField do
   more info at: https://developers.asana.com/reference/getcustomfieldsforworkspace
   """
   @spec get_workspace_fields(Client.t, integer | binary, List.t) :: [Asanaficator.CustomField]
-  def get_workspace_fileds(client \\ %Client{}, workspace_id, params \\ []) do
+  def get_workspace_fields(client \\ %Client{}, workspace_id, params \\ []) do
     response = get(client, "workspaces/#{workspace_id}/custom_fields", params)
     cast(Asanaficator.CustomField, response["data"], @nest_fields)
   end

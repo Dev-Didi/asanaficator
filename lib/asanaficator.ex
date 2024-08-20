@@ -1,6 +1,6 @@
 defmodule Asanaficator do
-  use HTTPoison.Base
-
+  use HTTPoison.Base 
+  require Req
   defmodule Client do
     defstruct auth: nil, endpoint: "https://app.asana.com/api/1.0/"
 
@@ -28,48 +28,35 @@ defmodule Asanaficator do
 
   @type response :: {integer, any} | :jsx.json_term
 
-  @spec process_response(HTTPoison.Response.t) :: response
-  def process_response(response) do
-    status_code = response.status_code
-    _headers = response.headers
+@spec process_response(Req.Response.t) :: response
+  def process_response(response) do  
+    status_code = response.status
+    headers = response.headers
     body = response.body
-    response = unless body == "", do: body |> Poison.decode!,
+    response = unless body == "", do: Req.Response.json(response).body |> JSX.decode!,
     else: nil
 
     if (status_code == 200), do: response,
     else: {status_code, response}
   end
 
+
 def cast(mod, resp, nest_fields \\ %{}) do
-  case resp do
-    %{} = map ->
-      converted = Map.new(map, fn {k, v} ->
-        k = String.to_atom(k)
-        case Map.has_key?(nest_fields, k) do
-          true ->
-            {k, cast(nest_fields[k], v, nest_fields[k].get_nest_fields())}
-          _ -> {k, v}
-        end
-      end)
-      Kernel.struct(mod, converted)
-
-    [head | tail] when is_list(tail) ->
-      [cast(mod, head, nest_fields) | cast(mod, tail, nest_fields)]
-
-    [] ->
-      nil
-
-    _ ->
-      resp
+    {converted, unrecognized} =
+      Enum.reduce(resp, {Map.new(), Map.new()}, fn {k, v}, {acc, unrecognized} ->
+      k_atom = String.to_atom(k)
+      case Map.has_key?(nest_fields, k_atom) do
+        true ->
+          {Map.put_new(acc, k_atom, cast(nest_fields[k_atom], v, nest_fields[k_atom].get_nest_fields())), unrecognized}
+        false ->
+          case Map.has_key?(Map.keys(mod.__struct__), k_atom) do
+            true -> {Map.put_new(acc, k_atom, v), unrecognized}
+            false -> {acc, Map.put_new(unrecognized, k_atom, v)}
+          end
+      end
+    end)
+    Kernel.struct(mod, Map.put_new(converted, :data, unrecognized))
   end
-end
-
-#  @spec cast(module(), [Asanaficator.response], Map) :: struct()
-#  def cast(mod, [head|tail], nest_fields) do
-#    resp = cast(mod, head, nest_fields)
-#    resps = cast(mod, tail, nest_fields)
-#    [resp|resps]
-#  end 
 
   def delete(client, path, body \\ "") do
     _request(:delete, url(client, path), client.auth, body)
@@ -93,15 +80,20 @@ end
     _request(:get, url, client.auth)
   end
 
-  def _request(method, url, auth, body \\ "") do
+  def _request(method, url, auth, body \\ nil) do
     json_request(method, url, body, authorization_header(auth, @user_agent))
   end
 
-  def json_request(method, url, body \\ "", headers \\ [], options \\ []) do
-    request!(method, url, Poison.encode!(body), headers, options) |> process_response
+  def json_request(method, url, body \\ nil, headers \\ [], options \\ []) do
+    IO.puts("URL: " <> url)
+    {:ok, resp} = case method do
+      :get -> Req.request(Req.new(method: method, url: url, headers: headers), options)
+      _ -> Req.request(Req.new(method: method, body: body, url: url, headers: headers), options)
+    end
+    process_response(resp)
   end
 
-  def raw_request(method, url, body \\ "", headers \\ [], options \\ []) do
+  def raw_request(method, url, body \\ nil, headers \\ [], options \\ []) do
     request!(method, url, body, headers, options) |> process_response
   end
 

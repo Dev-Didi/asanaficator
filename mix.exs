@@ -17,16 +17,18 @@ defmodule Asanaficator.Mixfile do
   end
 
   def application do
-    [ applications: [ :httpoison, :exjsx, :poison] ]
+    [ applications: [ :httpoison, :exjsx, :poison, :req] ]
   end
 
   defp deps do
-   [ { :httpoison, "~> 0.6.0" },
+   [ { :httpoison, "~> 2.2.1" },
      { :exjsx, "~> 3.0" },
      { :poison, "~> 5.0"},
+     { :req, "~> 0.5.0"},
      { :meck, "~> 0.8.2", only: :test },
      { :earmark, "~> 0.1", only: :dev},
      { :ex_doc, "~> 0.7", only: :dev}]
+
   
   end
 
