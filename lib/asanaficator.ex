@@ -31,32 +31,36 @@ defmodule Asanaficator do
 @spec process_response(Req.Response.t) :: response
   def process_response(response) do  
     status_code = response.status
-    headers = response.headers
-    body = response.body
-    response = unless body == "", do: Req.Response.json(response).body |> JSX.decode!,
-    else: nil
+    response_content = response.body
 
-    if (status_code == 200), do: response,
+    if (status_code == 200), do: response_content,
     else: {status_code, response}
   end
 
 
 def cast(mod, resp, nest_fields \\ %{}) do
-    {converted, unrecognized} =
-      Enum.reduce(resp, {Map.new(), Map.new()}, fn {k, v}, {acc, unrecognized} ->
-      k_atom = String.to_atom(k)
-      case Map.has_key?(nest_fields, k_atom) do
-        true ->
-          {Map.put_new(acc, k_atom, cast(nest_fields[k_atom], v, nest_fields[k_atom].get_nest_fields())), unrecognized}
-        false ->
-          case Map.has_key?(Map.keys(mod.__struct__), k_atom) do
-            true -> {Map.put_new(acc, k_atom, v), unrecognized}
-            false -> {acc, Map.put_new(unrecognized, k_atom, v)}
-          end
-      end
-    end)
-    Kernel.struct(mod, Map.put_new(converted, :data, unrecognized))
+  case resp do
+    %{} = map ->
+      converted = Map.new(map, fn {k, v} ->
+        k = String.to_atom(k)
+        case Map.has_key?(nest_fields, k) do
+          true ->
+            {k, cast(nest_fields[k], v, nest_fields[k].get_nest_fields())}
+          _ -> {k, v}
+        end
+      end)
+      Kernel.struct(mod, converted)
+
+    [head | tail] when is_list(tail) ->
+      [cast(mod, head, nest_fields) | cast(mod, tail, nest_fields)]
+
+    [] ->
+      nil
+
+    _ ->
+      resp
   end
+end
 
   def delete(client, path, body \\ "") do
     _request(:delete, url(client, path), client.auth, body)
