@@ -76,7 +76,7 @@ defmodule Asanaficator.Project do
     workspace: Asanaficator.Workspace,
     completed_by: Asanaficator.User,
     # created_from_template: Asanaficator.ProjectTemplate
-    followers: [Asanaficator.User],
+    followers: Asanaficator.User,
     owner: Asanaficator.User,
     # project_brief: Asanaficator.ProjectBrief,
     team: Asanaficator.Team
@@ -115,16 +115,14 @@ defmodule Asanaficator.Project do
   get count of tasks in a project 
   ## Example 
     Asanaficator.Project.get_task_count(client, 1337 :: project_id)
-
-  NOTE: this end point DOES allow opt fields which are left out here, since this 
-  should be single purpose and additional fields are very costly on this perticular 
-  endpoint.
-
+    
+    NOTE: By default this adds a "num_tasks" opt field, since without any opts it will not return any data. Options for this can be found on the API page. 
   more info: https://developers.asana.com/reference/gettaskcountsforproject
   """
-  @spec get_task_count(Client.t, binary | integer) :: integer 
-  def get_task_count(client \\ %Client{}, project_id) do
-    response = get(client, "projects/#{project_id}/task_counts")
+  @spec get_task_count(Client.t, binary | integer, List.t) :: integer 
+  def get_task_count(client \\ %Client{}, project_id, params \\ %{opt_fields: "num_tasks"}) do
+    response = get(client, "projects/#{project_id}/task_counts", params)
+    IO.inspect(response)
     response["data"]["num_tasks"] # NOTE that response data has more detail on the types of task that could be implemented here
   end
 end

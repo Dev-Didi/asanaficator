@@ -51,7 +51,6 @@ defmodule Asanaficator.User do
   @spec me(Client.t, List.t) :: Asanaficator.User.t
   def me(client, params \\ []) do
     response = get client, "users/me", params
-    IO.inspect(response["data"])
     cast(Asanaficator.User, response["data"], @nest_fields)
   end
 

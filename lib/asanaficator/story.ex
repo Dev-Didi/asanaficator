@@ -53,6 +53,7 @@ defmodule Asanaficator.Story do
 #  @spec get_story(Client.t, integer | binary, List.t) :: Asanaficator.Story.t
   def get_story(client \\ %Client{}, story_id, params \\ []) do
     response = get(client, "stories/#{story_id}", params)
+    IO.inspect(response)
     cast(Asanaficator.Story, response["data"], @nest_fields)
   end
 end

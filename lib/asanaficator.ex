@@ -28,6 +28,15 @@ defmodule Asanaficator do
 
   @type response :: {integer, any} | :jsx.json_term
 
+  @doc """
+  Helper function that returns a client and user instance. Provide it with a personal access token, or alternatively set an environment variable ASANAFICATOR_TEST_KEY. 
+  The user will be the user associated with the personal access token used. 
+  """
+  def startup(pat \\ System.get_env("ASANAFICATOR_TEST_KEY")) do
+    client = Asanaficator.Client.new(%{access_token: pat}) 
+    me = Asanaficator.User.me client
+    {client, me}
+  end
 @spec process_response(Req.Response.t) :: response
   def process_response(response) do  
     status_code = response.status
@@ -55,7 +64,7 @@ def cast(mod, resp, nest_fields \\ %{}) do
       [cast(mod, head, nest_fields) | cast(mod, tail, nest_fields)]
 
     [] ->
-      nil
+      []
 
     _ ->
       resp
@@ -89,7 +98,6 @@ end
   end
 
   def json_request(method, url, body \\ nil, headers \\ [], options \\ []) do
-    IO.puts("URL: " <> url)
     {:ok, resp} = case method do
       :get -> Req.request(Req.new(method: method, url: url, headers: headers), options)
       _ -> Req.request(Req.new(method: method, body: body, url: url, headers: headers), options)
